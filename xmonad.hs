@@ -1,24 +1,22 @@
---
--- xmonad example config file.
---
--- A template showing all available configuration hooks,
--- and how to override the defaults in your own xmonad.hs conf file.
---
--- Normally, you'd only override those defaults you care about.
---
-
 import XMonad
 import Data.Monoid
+import XMonad.Util.SpawnOnce
+import XMonad.Util.Run
+import XMonad.Hooks.ManageDocks
+import XMonad.Layout.Gaps
+import XMonad.Layout.Spacing
 import System.Exit
 
 import qualified XMonad.StackSet as W
 import qualified Data.Map        as M
 
+
 -- The preferred terminal program, which is used in a binding below and by
 -- certain contrib modules.
 --
 myTerminal      = "alacritty"
-
+myBrowser       = "firefox"
+myFileManager   = "pcmanfm"
 -- Whether focus follows the mouse pointer.
 myFocusFollowsMouse :: Bool
 myFocusFollowsMouse = True
@@ -51,8 +49,8 @@ myWorkspaces    = ["1","2","3","4","5","6","7","8","9"]
 
 -- Border colors for unfocused and focused windows, respectively.
 --
-myNormalBorderColor  = "#dddddd"
-myFocusedBorderColor = "#ff0000"
+myNormalBorderColor  = "#3b4252"
+myFocusedBorderColor = "#e5e9f0"
 
 ------------------------------------------------------------------------
 -- Key bindings. Add, modify or remove key bindings here.
@@ -67,6 +65,12 @@ myKeys conf@(XConfig {XMonad.modMask = modm}) = M.fromList $
 
     -- launch gmrun
     , ((modm .|. shiftMask, xK_r     ), spawn "gmrun")
+
+    -- launch file-manager
+    , ((modm .|. shiftMask, xK_Return), spawn myFileManager)
+
+    -- launch browser
+    , ((modm,                xK_q     ), spawn myBrowser)
 
     -- close focused window
     , ((modm .|. shiftMask, xK_c     ), kill)
@@ -93,7 +97,7 @@ myKeys conf@(XConfig {XMonad.modMask = modm}) = M.fromList $
     , ((modm,               xK_m     ), windows W.focusMaster  )
 
     -- Swap the focused window and the master window
-    , ((modm .|. shiftMask,             xK_Return), windows W.swapMaster)
+    , ((modm .|. shiftMask,             xK_l), windows W.swapMaster)
 
     -- Swap the focused window with the next window
     , ((modm .|. shiftMask, xK_j     ), windows W.swapDown  )
@@ -126,7 +130,7 @@ myKeys conf@(XConfig {XMonad.modMask = modm}) = M.fromList $
     , ((modm .|. shiftMask, xK_q     ), io (exitWith ExitSuccess))
 
     -- Restart xmonad
-    , ((modm              , xK_q     ), spawn "xmonad --recompile; xmonad --restart")
+    , ((modm .|. shiftMask, xK_r     ), spawn "xmonad --recompile; xmonad --restart")
 
     -- Run xmessage with a summary of the default keybindings (useful for beginners)
     , ((modm .|. shiftMask, xK_slash ), spawn ("echo \"" ++ help ++ "\" | xmessage -file -"))
@@ -181,12 +185,12 @@ myMouseBindings (XConfig {XMonad.modMask = modm}) = M.fromList $
 -- The available layouts.  Note that each layout is separated by |||,
 -- which denotes layout choice.
 --
-myLayout = tiled ||| Mirror tiled ||| Full
+myLayout = avoidStruts (tiled ||| Mirror tiled ||| Full)
   where
      -- default tiling algorithm partitions the screen into two panes
      tiled   = Tall nmaster delta ratio
 
-     -- The default number of windows in the master pane
+     -- The default number of windows in the master panel
      nmaster = 1
 
      -- Default proportion of screen occupied by master pane
@@ -194,6 +198,9 @@ myLayout = tiled ||| Mirror tiled ||| Full
 
      -- Percent of screen to increment by when resizing panes
      delta   = 3/100
+
+     -- 
+
 
 ------------------------------------------------------------------------
 -- Window rules:
@@ -243,14 +250,18 @@ myLogHook = return ()
 -- per-workspace layout choices.
 --
 -- By default, do nothing.
-myStartupHook = return ()
+myStartupHook = do  
+    spawnOnce "nitrogen --restore &"
+    spawnOnce "picom &"
 
 ------------------------------------------------------------------------
 -- Now run xmonad with all the defaults we set up.
 
 -- Run xmonad with the settings you specify. No need to modify this.
 --
-main = xmonad defaults
+main = do 
+    xmproc <- spawnPipe "xmobar /home/gecovin/.config/xmobar/xmobarrc.hs" 
+    xmonad $ docks defaults
 
 -- A structure containing your configuration settings, overriding
 -- fields in the default config. Any you don't override, will
@@ -274,7 +285,9 @@ defaults = def {
         mouseBindings      = myMouseBindings,
 
       -- hooks, layouts
-        layoutHook         = myLayout,
+        layoutHook         = 
+            spacingRaw True (Border 0 10 10 10) True (Border 20 20 20 20) True
+           $ myLayout,
         manageHook         = myManageHook,
         handleEventHook    = myEventHook,
         logHook            = myLogHook,
